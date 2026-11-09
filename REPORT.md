@@ -23,4 +23,8 @@ C1连接A=(0,1)与B=(1,5)。A→B方向需要T0[5]=1、S[(1,5)]=0；B→A方向�
 
 ## 提交信息
 
-建议PR标题：现代交换实验02-张志伟-2024280016
+PR标题：现代交换实验02-张志伟-2024280016
+
+个人Fork：https://github.com/z05217464-dotcom/Experimenet02-DSNetwork-Bidirectional-Speech
+
+Pull Request：https://github.com/jwentong/Experimenet02-DSNetwork-Bidirectional-Speech/pull/9
