@@ -1,12 +1,15 @@
-"""任务一：同一链路的时间交换。"""
 import numpy as np
-from src.models import IDLE, RESERVED, SLOTS
+from src.models import IDLE
 
-def t_switch(input_frame, control_memory):
-    """输入uint8[32]，控制表{输出时隙:输入时隙}，返回新的uint8[32]。
-
-    未连接输出填IDLE；TS0与TS16从输入同位置透传。
-    映射的输入、输出必须是合法业务时隙，否则抛ValueError。
-    不得原地修改输入帧。基础模型采用整帧缓存，时延由engine标记。
+def t_switch(link_frame, t_map):
     """
-    raise NotImplementedError('TODO：按输出指向输入的控制表完成T交换')
+    时间交换 T-switch
+    link_frame: 一维数组 shape(32,)，一条链路的一帧32个时隙
+    t_map: dict {输出时隙: 输入时隙}
+    返回新的一维帧 shape(32,)
+    """
+    out_frame = np.full(32, IDLE, dtype=np.uint8)
+    for out_ts, in_ts in t_map.items():
+        out_frame[out_ts] = link_frame[in_ts]
+    return out_frame
+
