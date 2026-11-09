@@ -1,6 +1,9 @@
 """任务三与四：双向连接控制与释放。"""
 from src.models import validate_endpoint, directions
 
+def _occupied(endpoint,tables):
+    return any(endpoint in pair for pair in tables.pairs.values())
+
 def connect_pair(connection_id, endpoint_a, endpoint_b, tables):
     """原地建立双向T→S映射，成功返回True。
 
@@ -11,7 +14,25 @@ def connect_pair(connection_id, endpoint_a, endpoint_b, tables):
     两个方向全部检查通过才写表，并记录pairs[id]=(a,b)。
     本实验固定路径可能发生内部阻塞，不要求自动改走其他路径。
     """
-    raise NotImplementedError('TODO：先检查两个方向，再完整提交连接')
+    validate_endpoint(endpoint_a);validate_endpoint(endpoint_b)
+    if endpoint_a==endpoint_b:
+        raise ValueError('连接两端不能是同一个端口')
+    if connection_id in tables.pairs:
+        return False
+    writes=[]
+    for src,dst in directions(endpoint_a,endpoint_b):
+        if _occupied(src,tables) or _occupied(dst,tables):
+            return False
+        if dst.timeslot in tables.t_maps[src.link_id]:
+            return False
+        if (dst.link_id,dst.timeslot) in tables.s_map:
+            return False
+        writes.append((src,dst))
+    for src,dst in writes:
+        tables.t_maps[src.link_id][dst.timeslot]=src.timeslot
+        tables.s_map[(dst.link_id,dst.timeslot)]=src.link_id
+    tables.pairs[connection_id]=(endpoint_a,endpoint_b)
+    return True
 
 def disconnect_pair(connection_id, tables):
     """释放指定ID的两个方向及pairs记录，成功返回True。
@@ -19,4 +40,11 @@ def disconnect_pair(connection_id, tables):
     不存在或重复释放返回False，不能影响其他连接。
     输出回到IDLE由未连接映射的T/S发送规则自然产生。
     """
-    raise NotImplementedError('TODO：释放该连接的双向资源')
+    pair=tables.pairs.get(connection_id)
+    if pair is None:
+        return False
+    for src,dst in directions(*pair):
+        tables.t_maps[src.link_id].pop(dst.timeslot,None)
+        tables.s_map.pop((dst.link_id,dst.timeslot),None)
+    del tables.pairs[connection_id]
+    return True
