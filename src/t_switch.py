@@ -1,12 +1,26 @@
-"""任务一：同一链路的时间交换。"""
 import numpy as np
-from src.models import IDLE, RESERVED, SLOTS
+from src.models import IDLE, SLOTS, RESERVED
 
 def t_switch(input_frame, control_memory):
-    """输入uint8[32]，控制表{输出时隙:输入时隙}，返回新的uint8[32]。
-
-    未连接输出填IDLE；TS0与TS16从输入同位置透传。
-    映射的输入、输出必须是合法业务时隙，否则抛ValueError。
-    不得原地修改输入帧。基础模型采用整帧缓存，时延由engine标记。
     """
-    raise NotImplementedError('TODO：按输出指向输入的控制表完成T交换')
+    input_frame: 长度 32 的输入帧 (np.uint8)
+    control_memory: t_maps[input_link]，字典格式 {output_ts: input_ts}
+    """
+    # 使用 numpy 生成一个全为 IDLE 的 uint8 数组
+    out = np.full(SLOTS, IDLE, dtype=np.uint8)
+    
+    # TS0 和 TS16 原位透传
+    for ts in RESERVED:
+        out[ts] = input_frame[ts]
+        
+    # 遍历控制表字典
+    for out_ts, in_ts in control_memory.items():
+        # 校验非法情况
+        if out_ts in RESERVED or in_ts in RESERVED:
+            raise ValueError("Cannot map reserved timeslots")
+        if not (0 <= out_ts < SLOTS) or not (0 <= in_ts < SLOTS):
+            raise ValueError("Timeslot out of range")
+            
+        out[out_ts] = input_frame[in_ts]
+        
+    return out

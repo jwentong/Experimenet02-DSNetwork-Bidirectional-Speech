@@ -1,12 +1,29 @@
-"""任务二：同一时隙位置的空间交换。"""
 import numpy as np
-from src.models import IDLE, RESERVED, SLOTS, LINKS
+from src.models import IDLE, SLOTS, LINKS, RESERVED
 
 def s_switch(input_frames, spatial_map):
-    """输入uint8[2,32]，控制表{(输出链路,时隙):输入链路}。
-
-    返回新的uint8[2,32]，S只改链路，不改时隙。
-    未连接业务输出填IDLE；各输出链路TS0/16保留本链路输入。
-    非法链路、时隙或保留时隙映射抛ValueError，不改输入。
     """
-    raise NotImplementedError('TODO：在同一时隙位置选择输入链路')
+    input_frames: 2 x 32 的输入帧
+    spatial_map: s_map，字典 {(out_link, out_ts): in_link}
+    """
+    # 生成 2 x 32 的全 IDLE 的 uint8 数组
+    out = np.full((LINKS, SLOTS), IDLE, dtype=np.uint8)
+    
+    # 每条链路的 TS0/16 原位透传
+    for link in range(LINKS):
+        for ts in RESERVED:
+            out[link, ts] = input_frames[link, ts]
+            
+    # 遍历映射表
+    for (out_link, out_ts), in_link in spatial_map.items():
+        if out_link not in range(LINKS) or in_link not in range(LINKS):
+            raise ValueError("Invalid link")
+        if out_ts in RESERVED:
+            raise ValueError("Cannot map reserved timeslot")
+        if not (0 <= out_ts < SLOTS):
+            raise ValueError("Timeslot out of range")
+            
+        # S 交换只改变链路，不改变时隙
+        out[out_link, out_ts] = input_frames[in_link, out_ts]
+        
+    return out
