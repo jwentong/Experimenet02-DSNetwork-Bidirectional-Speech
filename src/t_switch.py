@@ -9,4 +9,12 @@ def t_switch(input_frame, control_memory):
     映射的输入、输出必须是合法业务时隙，否则抛ValueError。
     不得原地修改输入帧。基础模型采用整帧缓存，时延由engine标记。
     """
-    raise NotImplementedError('TODO：按输出指向输入的控制表完成T交换')
+    for out_ts, in_ts in control_memory.items():
+        if out_ts not in range(SLOTS) or in_ts not in range(SLOTS) or out_ts in RESERVED or in_ts in RESERVED:
+            raise ValueError('映射必须使用合法业务时隙')
+    output = np.full(SLOTS, IDLE, dtype=np.uint8)
+    for ts in RESERVED:
+        output[ts] = input_frame[ts]
+    for out_ts, in_ts in control_memory.items():
+        output[out_ts] = input_frame[in_ts]
+    return output
