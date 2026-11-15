@@ -2,21 +2,63 @@
 from src.models import validate_endpoint, directions
 
 def connect_pair(connection_id, endpoint_a, endpoint_b, tables):
-    """原地建立双向T→S映射，成功返回True。
+    validate_endpoint(endpoint_a)
+    validate_endpoint(endpoint_b)
 
-    非法端口或两端相同抛ValueError。ID已存在、端口已占用、
-    内部T输出或S输出资源冲突，返回False且tables完全不变。
-    方向src→dst：T[src.link_id][dst.timeslot]=src.timeslot；
-    S[(dst.link_id,dst.timeslot)]=src.link_id。
-    两个方向全部检查通过才写表，并记录pairs[id]=(a,b)。
-    本实验固定路径可能发生内部阻塞，不要求自动改走其他路径。
-    """
-    raise NotImplementedError('TODO：先检查两个方向，再完整提交连接')
+    if endpoint_a == endpoint_b:
+        raise ValueError("两端不能相同")
+
+    if connection_id in tables.pairs:
+        return False
+
+    src1, dst1 = endpoint_a, endpoint_b
+    src2, dst2 = endpoint_b, endpoint_a
+
+    t_link1 = src1.link_id
+    t_out_ts1 = dst1.timeslot
+    s_key1 = (dst1.link_id, dst1.timeslot)
+
+    t_link2 = src2.link_id
+    t_out_ts2 = dst2.timeslot
+    s_key2 = (dst2.link_id, dst2.timeslot)
+
+    if t_out_ts1 in tables.t_maps[t_link1] or t_out_ts2 in tables.t_maps[t_link2]:
+        return False
+    if s_key1 in tables.s_map or s_key2 in tables.s_map:
+        return False
+
+    tables.t_maps[t_link1][t_out_ts1] = src1.timeslot
+    tables.s_map[s_key1] = src1.link_id
+
+    tables.t_maps[t_link2][t_out_ts2] = src2.timeslot
+    tables.s_map[s_key2] = src2.link_id
+
+    tables.pairs[connection_id] = (endpoint_a, endpoint_b)
+    return True
 
 def disconnect_pair(connection_id, tables):
-    """释放指定ID的两个方向及pairs记录，成功返回True。
+    if connection_id not in tables.pairs:
+        return False
 
-    不存在或重复释放返回False，不能影响其他连接。
-    输出回到IDLE由未连接映射的T/S发送规则自然产生。
-    """
-    raise NotImplementedError('TODO：释放该连接的双向资源')
+    endpoint_a, endpoint_b = tables.pairs[connection_id]
+    del tables.pairs[connection_id]
+
+    src1, dst1 = endpoint_a, endpoint_b
+    t_link1 = src1.link_id
+    t_out_ts1 = dst1.timeslot
+    s_key1 = (dst1.link_id, dst1.timeslot)
+    if t_out_ts1 in tables.t_maps[t_link1]:
+        del tables.t_maps[t_link1][t_out_ts1]
+    if s_key1 in tables.s_map:
+        del tables.s_map[s_key1]
+
+    src2, dst2 = endpoint_b, endpoint_a
+    t_link2 = src2.link_id
+    t_out_ts2 = dst2.timeslot
+    s_key2 = (dst2.link_id, dst2.timeslot)
+    if t_out_ts2 in tables.t_maps[t_link2]:
+        del tables.t_maps[t_link2][t_out_ts2]
+    if s_key2 in tables.s_map:
+        del tables.s_map[s_key2]
+
+    return True

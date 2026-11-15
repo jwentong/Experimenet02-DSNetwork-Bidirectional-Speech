@@ -3,10 +3,18 @@ import numpy as np
 from src.models import IDLE, RESERVED, SLOTS, LINKS
 
 def s_switch(input_frames, spatial_map):
-    """输入uint8[2,32]，控制表{(输出链路,时隙):输入链路}。
+    output_frames = np.full_like(input_frames, IDLE, dtype=np.uint8)
 
-    返回新的uint8[2,32]，S只改链路，不改时隙。
-    未连接业务输出填IDLE；各输出链路TS0/16保留本链路输入。
-    非法链路、时隙或保留时隙映射抛ValueError，不改输入。
-    """
-    raise NotImplementedError('TODO：在同一时隙位置选择输入链路')
+    for link in range(LINKS):
+        output_frames[link, 0] = input_frames[link, 0]
+        output_frames[link, 16] = input_frames[link, 16]
+
+    for (out_link, ts), in_link in spatial_map.items():
+        if not (0 <= out_link < LINKS and 0 <= in_link < LINKS and 0 <= ts < SLOTS):
+            raise ValueError(f"非法链路/时隙: out_link={out_link}, ts={ts}, in_link={in_link}")
+        if ts in (0, 16):
+            raise ValueError(f"TS0、TS16为保留时隙，不允许进入S交换映射")
+
+        output_frames[out_link, ts] = input_frames[in_link, ts]
+
+    return output_frames

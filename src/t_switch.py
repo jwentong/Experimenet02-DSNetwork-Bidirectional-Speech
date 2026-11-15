@@ -3,10 +3,19 @@ import numpy as np
 from src.models import IDLE, RESERVED, SLOTS
 
 def t_switch(input_frame, control_memory):
-    """输入uint8[32]，控制表{输出时隙:输入时隙}，返回新的uint8[32]。
+    output_frame = np.full_like(input_frame, IDLE, dtype=np.uint8)
+    output_frame[0] = input_frame[0]
+    output_frame[16] = input_frame[16]
 
-    未连接输出填IDLE；TS0与TS16从输入同位置透传。
-    映射的输入、输出必须是合法业务时隙，否则抛ValueError。
-    不得原地修改输入帧。基础模型采用整帧缓存，时延由engine标记。
-    """
-    raise NotImplementedError('TODO：按输出指向输入的控制表完成T交换')
+    for out_ts, in_ts in control_memory.items():
+        if not (0 <= out_ts < SLOTS and 0 <= in_ts < SLOTS):
+            raise ValueError(f"时隙越界: out_ts={out_ts}, in_ts={in_ts}")
+        if out_ts in (0, 16) or in_ts in (0, 16):
+            raise ValueError(f"TS0、TS16是保留透传时隙，不允许配置进交换表")
+
+        if input_frame[in_ts] == RESERVED:
+            continue
+
+        output_frame[out_ts] = input_frame[in_ts]
+
+    return output_frame
