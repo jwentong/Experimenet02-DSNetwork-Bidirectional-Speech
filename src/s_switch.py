@@ -1,12 +1,16 @@
-"""任务二：同一时隙位置的空间交换。"""
 import numpy as np
-from src.models import IDLE, RESERVED, SLOTS, LINKS
+from src.models import IDLE
 
-def s_switch(input_frames, spatial_map):
-    """输入uint8[2,32]，控制表{(输出链路,时隙):输入链路}。
-
-    返回新的uint8[2,32]，S只改链路，不改时隙。
-    未连接业务输出填IDLE；各输出链路TS0/16保留本链路输入。
-    非法链路、时隙或保留时隙映射抛ValueError，不改输入。
+def s_switch(frames, s_map):
     """
-    raise NotImplementedError('TODO：在同一时隙位置选择输入链路')
+    s_map: {(out_link, out_ts): in_link}
+    输出位置(out_link,out_ts)的数据，来自 in_link 这条链路、同一个时隙 out_ts
+    frames: list[np.ndarray(32,)]，每条链路的帧
+    返回 out: [link, timeslot] 二维数组
+    """
+    n_link = len(frames)
+    out = np.full((n_link, 32), IDLE, dtype=np.uint8)
+
+    for (out_link, out_ts), in_link in s_map.items():
+        out[out_link, out_ts] = frames[in_link][out_ts]
+    return out
